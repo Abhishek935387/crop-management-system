@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Simple Crop Management System</title>
+  <style>
+    :root {
+      --bg: #0f172a;        /* slate-900 */
+      --panel: #111827;     /* gray-900 */
+      --muted: #1f2937;     /* gray-800 */
+      --text: #e5e7eb;      /* gray-200 */
+      --subtext: #94a3b8;   /* slate-400 */
+      --brand: #22c55e;     /* green-500 */
+      --brand-2: #86efac;   /* green-300 */
+      --danger: #ef4444;    /* red-500 */
+      --warn: #f59e0b;      /* amber-500 */
+      --ok: #10b981;        /* emerald-500 */
+      --ring: #334155;      /* slate-700 */
+      --card: #0b1220;      /* dark panel */
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial; background: radial-gradient(1200px 800px at 80% -10%, #052e16, transparent 60%), var(--bg); color: var(--text); }
+    header { position: sticky; top: 0; z-index: 10; background: rgba(15,23,42,0.85); backdrop-filter: blur(6px); border-bottom: 1px solid var(--ring); }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 20px; }
+    .title { display: flex; align-items: center; gap: 12px; }
+    .logo { width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, var(--brand), #22d3ee); display: grid; place-items: center; font-weight: 800; color: #052e16; }
+    nav { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+    .tab { padding: 8px 12px; border: 1px solid var(--ring); border-radius: 999px; background: #0b1220; color: var(--subtext); cursor: pointer; }
+    .tab.active { color: #04150a; background: linear-gradient(135deg, var(--brand-2), #34d399); border-color: transparent; font-weight: 700; }
+
+    main { max-width: 1100px; margin: 24px auto; padding: 0 20px 40px; display: grid; gap: 16px; }
+    .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; }
+
+    .card { grid-column: span 12; background: linear-gradient(180deg, rgba(134,239,172,0.06), rgba(134,239,172,0.02)); border: 1px solid var(--ring); border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.25); }
+    .card h2 { margin: 0; padding: 16px 16px 0; font-size: 18px; color: var(--brand-2); }
+    .card .body { padding: 16px; }
+
+    .statbar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .stat { background: var(--card); border: 1px solid var(--ring); border-radius: 12px; padding: 12px; }
+    .stat .k { font-size: 22px; font-weight: 800; color: white; }
+    .stat .l { font-size: 12px; color: var(--subtext); }
+
+    form { display: grid; grid-template-columns: repeat(12, 1fr); gap: 10px; }
+    label { grid-column: span 3; display: grid; gap: 6px; font-size: 12px; color: var(--subtext); }
+    input, select, textarea { width: 100%; padding: 10px; background: #0b1220; color: var(--text); border: 1px solid var(--ring); border-radius: 10px; }
+    textarea { min-height: 44px; }
+    .row { grid-column: span 12; display: grid; grid-template-columns: repeat(12, 1fr); gap: 10px; }
+    .actions { display: flex; gap: 8px; margin-top: 4px; }
+    .btn { padding: 10px 14px; border-radius: 10px; border: 1px solid var(--ring); background: #0b1220; color: var(--text); cursor: pointer; }
+    .btn.primary { background: linear-gradient(135deg, var(--brand), #34d399); color: #052e16; border: none; font-weight: 800; }
+    .btn.ghost { background: transparent; }
+    .btn.danger { background: var(--danger); border: none; }
+
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 10px; border-bottom: 1px solid var(--ring); font-size: 14px; }
+    th { color: var(--subtext); font-weight: 600; }
+
+    .badge { padding: 4px 8px; border-radius: 999px; font-size: 12px; border: 1px solid var(--ring); background: #0b1220; color: var(--subtext); }
+    .badge.ok { color: #052e16; background: #86efac; border-color: transparent; font-weight: 700; }
+    .badge.warn { background: #3b2b0d; color: #fcd34d; }
+    .badge.danger { background: #3b0d0d; color: #fecaca; }
+
+    .muted { color: var(--subtext); font-size: 13px; }
+    .hidden { display: none !important; }
+    .two { grid-column: span 12; }
+    @media (min-width: 900px) {
+      .two { grid-column: span 6; }
+      .card.half { grid-column: span 6; }
+    }
+    footer { text-align: center; color: var(--subtext); padding: 24px; border-top: 1px solid var(--ring); }
+    .pill { font-size: 12px; padding: 6px 10px; border: 1px dashed var(--ring); border-radius: 999px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <div class="title">
+        <div class="logo">🌱</div>
+        <div>
+          <div style="font-weight:800; font-size: 18px;">Crop Management</div>
+          <div class="muted">Simple offline-first farm log (local only)</div>
+        </div>
+      </div>
+      <nav id="tabs"></nav>
+    </div>
+  </header>
+
+  <main>
+    <!-- DASHBOARD -->
+    <section id="page-dashboard">
+      <div class="grid">
+        <div class="card">
+          <div class="body">
+            <div class="statbar">
+              <div class="stat"><div class="k" id="statCrops">0</div><div class="l">Crops</div></div>
+              <div class="stat"><div class="k" id="statFields">0</div><div class="l">Fields</div></div>
+              <div class="stat"><div class="k" id="statTasksOpen">0</div><div class="l">Open Tasks</div></div>
+              <div class="stat"><div class="k" id="statTasksDue">0</div><div class="l">Due in 7 days</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card half">
+          <h2>Upcoming tasks</h2>
+          <div class="body">
+            <table id="tblUpcoming">
+              <thead>
+                <tr><th>When</th><th>Task</th><th>Field</th><th>Crop</th><th>Status</th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card half">
+          <h2>Recent notes</h2>
+          <div class="body">
+            <ul id="recentNotes" style="margin:0; padding-left: 18px;"></ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CROPS -->
+    <section id="page-crops" class="hidden">
+      <div class="grid">
+        <div class="card">
+          <h2>Add / Edit Crop</h2>
+          <div class="body">
+            <form id="formCrop">
+              <input type="hidden" id="cropId" />
+              <label>Crop name<input required id="cropName" placeholder="e.g., Wheat" /></label>
+              <label>Variety<input id="cropVariety" placeholder="e.g., Lok-1" /></label>
+              <label>Season
+                <select id="cropSeason">
+                  <option value="Rabi">Rabi</option>
+                  <option value="Kharif">Kharif</option>
+                  <option value="Zaid">Zaid</option>
+                </select>
+              </label>
+              <label>Planting date<input type="date" id="cropPlant" /></label>
+              <label>Expected harvest<input type="date" id="cropHarvest" /></label>
+              <label>Expected yield (q/ha)<input type="number" id="cropYield" step="0.01" /></label>
+              <label class="row" style="grid-column: span 12;">Notes<textarea id="cropNotes" placeholder="Irrigation schedule, fertilizer plan, etc."></textarea></label>
+              <div class="row">
+                <div class="actions">
+                  <button class="btn primary" type="submit">Save Crop</button>
+                  <button class="btn ghost" type="button" id="cropReset">Reset</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>All Crops</h2>
+          <div class="body">
+            <div class="actions" style="justify-content: space-between;">
+              <input id="cropSearch" placeholder="Search crops..." style="max-width: 260px;" />
+              <span class="pill">Tip: Click a row to edit</span>
+            </div>
+            <table id="tblCrops">
+              <thead><tr><th>Name</th><th>Variety</th><th>Season</th><th>Plant</th><th>Harvest</th><th>Yield</th><th></th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FIELDS -->
+    <section id="page-fields" class="hidden">
+      <div class="grid">
+        <div class="card">
+          <h2>Add / Edit Field</h2>
+          <div class="body">
+            <form id="formField">
+              <input type="hidden" id="fieldId" />
+              <label>Field name<input required id="fieldName" placeholder="e.g., North Plot" /></label>
+              <label>Area (ha)<input type="number" id="fieldArea" step="0.01" /></label>
+              <label>Soil type<input id="fieldSoil" placeholder="e.g., Loam" /></label>
+              <label>Current crop<select id="fieldCrop"></select></label>
+              <label class="row" style="grid-column: span 12;">Notes<textarea id="fieldNotes" placeholder="Irrigation source, issues..."></textarea></label>
+              <div class="row">
+                <div class="actions">
+                  <button class="btn primary" type="submit">Save Field</button>
+                  <button class="btn ghost" type="button" id="fieldReset">Reset</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>All Fields</h2>
+          <div class="body">
+            <div class="actions" style="justify-content: space-between;">
+              <input id="fieldSearch" placeholder="Search fields..." style="max-width: 260px;" />
+              <span class="pill">Tip: Click a row to edit</span>
+            </div>
+            <table id="tblFields">
+              <thead><tr><th>Name</th><th>Area (ha)</th><th>Soil</th><th>Crop</th><th></th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TASKS -->
+    <section id="page-tasks" class="hidden">
+      <div class="grid">
+        <div class="card">
+          <h2>New Task</h2>
+          <div class="body">
+            <form id="formTask">
+              <input type="hidden" id="taskId" />
+              <label>Title<input required id="taskTitle" placeholder="e.g., Irrigate field" /></label>
+              <label>Type
+                <select id="taskType">
+                  <option>Watering</option>
+                  <option>Fertilizer</option>
+                  <option>Pest Control</option>
+                  <option>Weeding</option>
+                  <option>Harvest</option>
+                  <option>Other</option>
+                </select>
+              </label>
+              <label>Field<select id="taskField"></select></label>
+              <label>Crop<select id="taskCrop"></select></label>
+              <label>Due date<input type="date" id="taskDue" /></label>
+              <label>Priority
+                <select id="taskPriority">
+                  <option>Low</option>
+                  <option>Medium</option>
+                  <option>High</option>
+                </select>
+              </label>
+              <label class="row" style="grid-column: span 12;">Notes<textarea id="taskNotes" placeholder="Amount of water, product & dosage, etc."></textarea></label>
+              <div class="row">
+                <div class="actions">
+                  <button class="btn primary" type="submit">Save Task</button>
+                  <button class="btn ghost" type="button" id="taskReset">Reset</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Task List</h2>
+          <div class="body">
+            <div class="row" style="align-items:center;">
+              <input id="taskSearch" placeholder="Search tasks..." style="grid-column: span 4;" />
+              <label style="grid-column: span 2;">Status
+                <select id="taskFilterStatus">
+                  <option value="all">All</option>
+                  <option value="open">Open</option>
+                  <option value="done">Done</option>
+                </select>
+              </label>
+              <label style="grid-column: span 2;">Sort by
+                <select id="taskSort">
+                  <option value="due">Due date</option>
+                  <option value="priority">Priority</option>
+                  <option value="title">Title</option>
+                </select>
+              </label>
+            </div>
+            <table id="tblTasks">
+              <thead><tr><th>Due</th><th>Title</th><th>Type</th><th>Field</th><th>Crop</th><th>Priority</th><th>Status</th><th></th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- REPORTS -->
+    <section id="page-reports" class="hidden">
+      <div class="grid">
+        <div class="card">
+          <h2>Crop Schedule</h2>
+          <div class="body">
+            <table id="tblReport">
+              <thead><tr><th>Crop</th><th>Field</th><th>Plant</th><th>Harvest (exp)</th><th>Area (ha)</th><th>Yield (q/ha)</th><th>Est. Total (q)</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SETTINGS / BACKUP -->
+    <section id="page-settings" class="hidden">
+      <div class="grid">
+        <div class="card">
+          <h2>Data & Backup</h2>
+          <div class="body">
+            <div class="actions">
+              <button class="btn" id="btnExport">Export JSON</button>
+              <label class="btn" for="fileImport" style="cursor:pointer;">Import JSON</label>
+              <input id="fileImport" type="file" accept="application/json" class="hidden" />
+              <button class="btn danger" id="btnWipe">Wipe All Data</button>
+            </div>
+            <p class="muted">Data is stored locally in your browser using localStorage. Export regularly to keep a backup.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+  <footer>
+    Built with ❤️ for simplicity. No server required.
+  </footer>
+
+  <script>
+    // --- Utilities ---
+    const $ = sel => document.querySelector(sel);
+    const $$ = sel => Array.from(document.querySelectorAll(sel));
+    const fmtDate = d => d ? new Date(d).toISOString().slice(0,10) : '';
+    const daysBetween = (a,b) => Math.round((new Date(a) - new Date(b)) / (1000*60*60*24));
+
+    function uid(prefix='id') { return prefix + '_' + Math.random().toString(36).slice(2,9); }
+
+    // --- Storage ---
+    const DBKEY = 'cms.v1';
+    const blank = () => ({ crops: [], fields: [], tasks: [], notes: [] });
+    const load = () => { try { return JSON.parse(localStorage.getItem(DBKEY)) || blank(); } catch { return blank(); } };
+    const save = () => localStorage.setItem(DBKEY, JSON.stringify(state));
+    let state = load();
+
+    // --- Tabs ---
+    const PAGES = [
+      { id: 'dashboard', label: 'Dashboard' },
+      { id: 'crops',     label: 'Crops' },
+      { id: 'fields',    label: 'Fields' },
+      { id: 'tasks',     label: 'Tasks' },
+      { id: 'reports',   label: 'Reports' },
+      { id: 'settings',  label: 'Settings' },
+    ];
+    function renderTabs(active='dashboard') {
+      const nav = $('#tabs');
+      nav.innerHTML = '';
+      PAGES.forEach(p => {
+        const b = document.createElement('button');
+        b.className = 'tab' + (active===p.id ? ' active':'');
+        b.textContent = p.label;
+        b.onclick = () => showPage(p.id);
+        nav.appendChild(b);
+      });
+    }
+    function showPage(id) {
+      PAGES.forEach(p => {
+        const sec = $('#page-' + p.id);
+        if (!sec) return;
+        if (p.id === id) sec.classList.remove('hidden'); else sec.classList.add('hidden');
+      });
+      $$('#tabs .tab').forEach((el, i) => el.classList.toggle('active', PAGES[i].id===id));
+      refreshAll();
+    }
+
+    // --- Crop CRUD ---
+    function cropOptions(select) {
+      select.innerHTML = '<option value="">—</option>' + state.crops.map(c => `<option value="${c.id}">${c.name}${c.variety?(' • '+c.variety):''}</option>`).join('');
+    }
+    function fillCropForm(crop) {
+      $('#cropId').value = crop?.id || '';
+      $('#cropName').value = crop?.name || '';
+      $('#cropVariety').value = crop?.variety || '';
+      $('#cropSeason').value = crop?.season || 'Rabi';
+      $('#cropPlant').value = crop?.plant || '';
+      $('#cropHarvest').value = crop?.harvest || '';
+      $('#cropYield').value = crop?.yield ?? '';
+      $('#cropNotes').value = crop?.notes || '';
+    }
+    function renderCrops() {
+      const q = ($('#cropSearch').value || '').toLowerCase();
+      const tbody = $('#tblCrops tbody');
+      tbody.innerHTML = '';
+      state.crops.filter(c => [c.name, c.variety, c.season].join(' ').toLowerCase().includes(q))
+        .sort((a,b) => a.name.localeCompare(b.name))
+        .forEach(c => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${c.name}</td>
+            <td>${c.variety||''}</td>
+            <td>${c.season||''}</td>
+            <td>${c.plant||''}</td>
+            <td>${c.harvest||''}</td>
+            <td>${c.yield||''}</td>
+            <td style="text-align:right;">
+              <button class="btn ghost" data-edit="${c.id}">Edit</button>
+              <button class="btn danger" data-del="${c.id}">Delete</button>
+            </td>`;
+          tr.addEventListener('click', (e) => {
+            if (e.target.matches('button')) return; // ignore button clicks for row edit
+            fillCropForm(c);
+            showPage('crops');
+            window.scrollTo({top:0, behavior:'smooth'});
+          });
+          tr.querySelector('[data-edit]')?.addEventListener('click', () => fillCropForm(c));
+          tr.querySelector('[data-del]')?.addEventListener('click', () => delCrop(c.id));
+          tbody.appendChild(tr);
+        });
+      cropOptions($('#fieldCrop'));
+      cropOptions($('#taskCrop'));
+    }
+    function saveCrop(e) {
+      e.preventDefault();
+      const id = $('#cropId').value || uid('crop');
+      const crop = {
+        id,
+        name: $('#cropName').value.trim(),
+        variety: $('#cropVariety').value.trim(),
+        season: $('#cropSeason').value,
+        plant: $('#cropPlant').value,
+        harvest: $('#cropHarvest').value,
+        yield: parseFloat($('#cropYield').value || '0') || null,
+        notes: $('#cropNotes').value.trim()
+      };
+      if (!crop.name) return alert('Crop name is required');
+      const i = state.crops.findIndex(c => c.id===id);
+      if (i>=0) state.crops[i] = crop; else state.crops.push(crop);
+      save(); fillCropForm(null); renderCrops(); refreshDashboard();
+      pushNote(`Saved crop: ${crop.name}`);
+    }
+    function delCrop(id) {
+      if (!confirm('Delete this crop?')) return;
+      // remove crop from fields/tasks as reference
+      state.fields.forEach(f => { if (f.cropId===id) f.cropId=''; });
+      state.tasks.forEach(t => { if (t.cropId===id) t.cropId=''; });
+      state.crops = state.crops.filter(c => c.id!==id);
+      save(); renderCrops(); renderFields(); renderTasks(); refreshDashboard();
+    }
+
+    // --- Field CRUD ---
+    function fieldOptions(select) {
+      select.innerHTML = '<option value="">—</option>' + state.fields.map(f => `<option value="${f.id}">${f.name}</option>`).join('');
+    }
+    function fillFieldForm(field) {
+      $('#fieldId').value = field?.id || '';
+      $('#fieldName').value = field?.name || '';
+      $('#fieldArea').value = field?.area ?? '';
+      $('#fieldSoil').value = field?.soil || '';
+      $('#fieldCrop').value = field?.cropId || '';
+      $('#fieldNotes').value = field?.notes || '';
+    }
+    function renderFields() {
+      const q = ($('#fieldSearch').value || '').toLowerCase();
+      const tbody = $('#tblFields tbody');
+      tbody.innerHTML = '';
+      state.fields.filter(f => [f.name, f.soil].join(' ').toLowerCase().includes(q))
+        .sort((a,b) => a.name.localeCompare(b.name))
+        .forEach(f => {
+          const crop = state.crops.find(c => c.id===f.cropId);
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${f.name}</td>
+            <td>${f.area||''}</td>
+            <td>${f.soil||''}</td>
+            <td>${crop ? crop.name : ''}</td>
+            <td style="text-align:right;">
+              <button class="btn ghost" data-edit="${f.id}">Edit</button>
+              <button class="btn danger" data-del="${f.id}">Delete</button>
+            </td>`;
+          tr.addEventListener('click', (e) => {
+            if (e.target.matches('button')) return;
+            fillFieldForm(f); showPage('fields'); window.scrollTo({top:0, behavior:'smooth'});
+          });
+          tr.querySelector('[data-edit]')?.addEventListener('click', () => fillFieldForm(f));
+          tr.querySelector('[data-del]')?.addEventListener('click', () => delField(f.id));
+          tbody.appendChild(tr);
+        });
+      fieldOptions($('#taskField'));
+    }
+    function saveField(e) {
+      e.preventDefault();
+      const id = $('#fieldId').value || uid('field');
+      const field = {
+        id,
+        name: $('#fieldName').value.trim(),
+        area: parseFloat($('#fieldArea').value || '0') || null,
+        soil: $('#fieldSoil').value.trim(),
+        cropId: $('#fieldCrop').value,
+        notes: $('#fieldNotes').value.trim()
+      };
+      if (!field.name) return alert('Field name is required');
+      const i = state.fields.findIndex(f => f.id===id);
+      if (i>=0) state.fields[i] = field; else state.fields.push(field);
+      save(); fillFieldForm(null); renderFields(); refreshDashboard();
+      pushNote(`Saved field: ${field.name}`);
+    }
+    function delField(id) {
+      if (!confirm('Delete this field?')) return;
+      state.tasks.forEach(t => { if (t.fieldId===id) t.fieldId=''; });
+      state.fields = state.fields.filter(f => f.id!==id);
+      save(); renderFields(); renderTasks(); refreshDashboard();
+    }
+
+    // --- Task CRUD ---
+    function fillTaskForm(task) {
+      $('#taskId').value = task?.id || '';
+      $('#taskTitle').value = task?.title || '';
+      $('#taskType').value = task?.type || 'Other';
+      $('#taskField').value = task?.fieldId || '';
+      $('#taskCrop').value = task?.cropId || '';
+      $('#taskDue').value = task?.due || '';
+      $('#taskPriority').value = task?.priority || 'Medium';
+      $('#taskNotes').value = task?.notes || '';
+    }
+    function renderTasks() {
+      const q = ($('#taskSearch').value || '').toLowerCase();
+      const filter = $('#taskFilterStatus').value;
+      const sort = $('#taskSort').value;
+      const tbody = $('#tblTasks tbody');
+      tbody.innerHTML = '';
+
+      let arr = state.tasks.filter(t => [t.title, t.type].join(' ').toLowerCase().includes(q));
+      if (filter==='open') arr = arr.filter(t => !t.done);
+      if (filter==='done') arr = arr.filter(t => t.done);
+
+      arr.sort((a,b) => {
+        if (sort==='due') return (a.due||'') < (b.due||'') ? -1 : 1;
+        if (sort==='priority') return priWeight(b.priority) - priWeight(a.priority);
+        if (sort==='title') return a.title.localeCompare(b.title);
+        return 0;
+      });
+
+      arr.forEach(t => {
+        const f = state.fields.find(x => x.id===t.fieldId);
+        const c = state.crops.find(x => x.id===t.cropId);
+        const status = t.done ? '<span class="badge ok">Done</span>' : badgeDue(t.due);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${t.due||''}</td>
+          <td>${t.title}</td>
+          <td>${t.type||''}</td>
+          <td>${f?f.name:''}</td>
+          <td>${c?c.name:''}</td>
+          <td>${t.priority}</td>
+          <td>${status}</td>
+          <td style="text-align:right;">
+            <button class="btn ghost" data-done="${t.id}">${t.done?'Undo':'Mark done'}</button>
+            <button class="btn ghost" data-edit="${t.id}">Edit</button>
+            <button class="btn danger" data-del="${t.id}">Delete</button>
+          </td>`;
+        tr.querySelector('[data-done]')?.addEventListener('click', () => toggleTask(t.id));
+        tr.querySelector('[data-edit]')?.addEventListener('click', () => fillTaskForm(t));
+        tr.querySelector('[data-del]')?.addEventListener('click', () => delTask(t.id));
+        tbody.appendChild(tr);
+      });
+
+      cropOptions($('#taskCrop')); fieldOptions($('#taskField'));
+    }
+    function priWeight(p) { return { High:3, Medium:2, Low:1 }[p] || 0; }
+    function badgeDue(due) {
+      if (!due) return '<span class="badge">No date</span>';
+      const days = daysBetween(due, new Date());
+      if (days < -7) return `<span class="badge">In ${Math.abs(days)}d</span>`;
+      if (days < 0) return `<span class="badge warn">In ${Math.abs(days)}d</span>`;
+      if (days === 0) return '<span class="badge warn">Today</span>';
+      if (days <= 3) return `<span class="badge warn">${days}d late</span>`;
+      return `<span class="badge danger">${days}d late</span>`;
+    }
+    function saveTask(e) {
+      e.preventDefault();
+      const id = $('#taskId').value || uid('task');
+      const task = {
+        id,
+        title: $('#taskTitle').value.trim(),
+        type: $('#taskType').value,
+        fieldId: $('#taskField').value,
+        cropId: $('#taskCrop').value,
+        due: $('#taskDue').value,
+        priority: $('#taskPriority').value,
+        notes: $('#taskNotes').value.trim(),
+        done: state.tasks.find(t => t.id===id)?.done || false
+      };
+      if (!task.title) return alert('Title is required');
+      const i = state.tasks.findIndex(t => t.id===id);
+      if (i>=0) state.tasks[i] = task; else state.tasks.push(task);
+      save(); fillTaskForm(null); renderTasks(); refreshDashboard();
+      pushNote(`Saved task: ${task.title}`);
+    }
+    function delTask(id) {
+      if (!confirm('Delete this task?')) return;
+      state.tasks = state.tasks.filter(t => t.id!==id);
+      save(); renderTasks(); refreshDashboard();
+    }
+    function toggleTask(id) {
+      const t = state.tasks.find(x => x.id===id); if (!t) return;
+      t.done = !t.done; save(); renderTasks(); refreshDashboard();
+    }
+
+    // --- Reports ---
+    function renderReport() {
+      const tbody = $('#tblReport tbody');
+      tbody.innerHTML = '';
+      state.fields.forEach(f => {
+        const c = state.crops.find(x => x.id===f.cropId);
+        if (!c) return;
+        const est = (f.area || 0) * (c.yield || 0);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${c.name}${c.variety?(' • '+c.variety):''}</td>
+          <td>${f.name}</td>
+          <td>${c.plant||''}</td>
+          <td>${c.harvest||''}</td>
+          <td>${f.area||''}</td>
+          <td>${c.yield||''}</td>
+          <td>${est ? est.toFixed(2): ''}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // --- Dashboard ---
+    function refreshDashboard() {
+      $('#statCrops').textContent = state.crops.length;
+      $('#statFields').textContent = state.fields.length;
+      const open = state.tasks.filter(t => !t.done).length;
+      $('#statTasksOpen').textContent = open;
+      const soon = state.tasks.filter(t => !t.done && t.due && daysBetween(t.due, new Date())<=0 && daysBetween(t.due, new Date())>=-7).length;
+      $('#statTasksDue').textContent = soon;
+
+      // Upcoming table
+      const n = new Date();
+      const up = state.tasks.filter(t => !t.done && t.due && daysBetween(t.due, n) >= -7)
+        .sort((a,b) => (a.due||'') < (b.due||'') ? -1 : 1).slice(0, 8);
+      const tbody = $('#tblUpcoming tbody');
+      tbody.innerHTML = '';
+      up.forEach(t => {
+        const f = state.fields.find(x => x.id===t.fieldId);
+        const c = state.crops.find(x => x.id===t.cropId);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${t.due||''}</td>
+          <td>${t.title}</td>
+          <td>${f?f.name:''}</td>
+          <td>${c?c.name:''}</td>
+          <td>${t.done?'<span class="badge ok">Done</span>':badgeDue(t.due)}</td>`;
+        tbody.appendChild(tr);
+      });
+
+      // Notes
+      const ul = $('#recentNotes');
+      ul.innerHTML = '';
+      state.notes.slice(-8).reverse().forEach(n => {
+        const li = document.createElement('li');
+        li.innerHTML = `<span class="muted">${fmtDate(n.ts)}</span> — ${n.text}`;
+        ul.appendChild(li);
+      });
+    }
+
+    function pushNote(text) {
+      state.notes.push({ ts: new Date().toISOString(), text });
+      save(); refreshDashboard();
+    }
+
+    // --- Settings: export/import/wipe ---
+    function exportJSON() {
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `crop-management-${new Date().toISOString().slice(0,10)}.json`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+    }
+    function importJSON(file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(reader.result);
+          if (!data || typeof data !== 'object') throw new Error('Invalid file');
+          state = { ...blank(), ...data };
+          save(); refreshAll(); alert('Data imported');
+        } catch (e) { alert('Import failed: ' + e.message); }
+      };
+      reader.readAsText(file);
+    }
+
+    function wipeAll() {
+      if (!confirm('This will delete all data. Continue?')) return;
+      state = blank(); save(); refreshAll();
+    }
+
+    // --- Init & events ---
+    function refreshAll() {
+      renderCrops(); renderFields(); renderTasks(); renderReport(); refreshDashboard();
+    }
+
+    function addSampleDataIfEmpty() {
+      if (state.crops.length || state.fields.length || state.tasks.length) return;
+      const c1 = { id: uid('crop'), name: 'Wheat', variety: 'Lok-1', season:'Rabi', plant: fmtDate(new Date()), harvest: fmtDate(new Date(Date.now()+1000*60*60*24*120)), yield: 45, notes: 'Irrigation every 10 days' };
+      const c2 = { id: uid('crop'), name: 'Rice', variety: 'Sona Masuri', season:'Kharif', plant: fmtDate(new Date()), harvest: fmtDate(new Date(Date.now()+1000*60*60*24*110)), yield: 50, notes: '' };
+      const f1 = { id: uid('field'), name: 'North Plot', area: 1.2, soil:'Loam', cropId: c1.id, notes:'' };
+      const f2 = { id: uid('field'), name: 'South Plot', area: 0.8, soil:'Clay', cropId: c2.id, notes:'' };
+      const t1 = { id: uid('task'), title:'Irrigation cycle', type:'Watering', fieldId: f1.id, cropId:c1.id, due: fmtDate(new Date(Date.now()+1000*60*60*24*2)), priority:'High', notes:'35 mm', done:false };
+      const t2 = { id: uid('task'), title:'Urea application', type:'Fertilizer', fieldId: f1.id, cropId:c1.id, due: fmtDate(new Date(Date.now()-1000*60*60*24*1)), priority:'Medium', notes:'50 kg/ha', done:false };
+      state.crops.push(c1,c2); state.fields.push(f1,f2); state.tasks.push(t1,t2); save();
+    }
+
+    // Wire events
+    document.addEventListener('DOMContentLoaded', () => {
+      renderTabs('dashboard');
+      addSampleDataIfEmpty();
+      refreshAll();
+
+      // forms
+      $('#formCrop').addEventListener('submit', saveCrop);
+      $('#cropReset').addEventListener('click', () => fillCropForm(null));
+      $('#cropSearch').addEventListener('input', renderCrops);
+
+      $('#formField').addEventListener('submit', saveField);
+      $('#fieldReset').addEventListener('click', () => fillFieldForm(null));
+      $('#fieldSearch').addEventListener('input', renderFields);
+
+      $('#formTask').addEventListener('submit', saveTask);
+      $('#taskReset').addEventListener('click', () => fillTaskForm(null));
+      $('#taskSearch').addEventListener('input', renderTasks);
+      $('#taskFilterStatus').addEventListener('change', renderTasks);
+      $('#taskSort').addEventListener('change', renderTasks);
+
+      // settings
+      $('#btnExport').addEventListener('click', exportJSON);
+      $('#fileImport').addEventListener('change', (e) => e.target.files[0] && importJSON(e.target.files[0]));
+      $('#btnWipe').addEventListener('click', wipeAll);
+
+      // keyboard: Ctrl/Cmd+S to save focused form
+      document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==='s') {
+          const f = document.activeElement?.closest('form');
+          if (f) { e.preventDefault(); f.requestSubmit(); }
+        }
+      });
+    });
+  </script>
+</body>
+</html>
